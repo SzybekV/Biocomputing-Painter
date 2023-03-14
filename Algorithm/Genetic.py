@@ -50,15 +50,14 @@ def mutate(solution, indpb):
         # add a new polygon
         newbron = make_polygon()
         solution.append(newbron)
-    if random.random() < 0.15:
+    if random.random() < 0.2:
         rgb = []
         polygon = random.choice(solution)
-        limit = 2
-        for index, colour in enumerate(polygon[0]):
+        for colour in polygon[0]:
             rgb.append(colour)
-            if index == limit:
-                break
-        tools.mutGaussian(rgb, 0, 50, 1)
+        tools.mutGaussian(rgb, 0, 100, indpb) # before 10
+        rgb = [max(0, min(int(x), 256)) for x in rgb]
+        polygon[0] = tuple(rgb)
     else:
         # reorder polygons
         tools.mutShuffleIndexes(solution, indpb)
@@ -66,7 +65,7 @@ def mutate(solution, indpb):
 
 
 MAX = 255 * 200 * 200
-TARGET = Image.open("cd..TargetImages/8a.png")
+TARGET = Image.open("/home/szynus/PycharmProjects/Biocomputing-Painter/TargetImages/8a.png")
 TARGET.load()
 
 
@@ -88,43 +87,27 @@ def run(generations=50, population_size=100, seed=41):
     toolbox.register("population", tools.initRepeat, list, toolbox.Individual)
     toolbox.register("evaluate", evaluate)
     toolbox.register("mate", tools.cxTwoPoint)
-    toolbox.register("mutate", mutate, indpb=0.05)
-    toolbox.register("select", tools.selTournament, tournsize=100)
+    toolbox.register("mutate", mutate, indpb=0.25)
+    toolbox.register("select", tools.selTournament, tournsize=50)
+
+    pool = multiprocessing.Pool(6)
+    toolbox.register("map", pool.map)
 
     population = toolbox.population(n=population_size)
-
-    #for i in range(generations):
-    #   offspring = algorithms.varAnd(population, toolbox, cxpb=0.5, mutpb=0.1)
-    #    fitnesses = toolbox.map(toolbox.evaluate, offspring)
-    #    for value, individual in zip(fitnesses, offspring):
-    #        individual.fitness.values = value
-    #    population = toolbox.select(offspring, len(population))
 
     hof = tools.HallOfFame(3)
     stats = tools.Statistics(lambda x: x.fitness.values[0])
     stats.register("avg", statistics.mean)
     stats.register("std", statistics.stdev)
 
-    population, log = algorithms.eaSimple(population, toolbox, cxpb=0.5, mutpb=0.5,
-                                          ngen=generations, stats=stats, halloffame=hof, verbose=False)
+    # population, log = algorithms.eaSimple(population, toolbox, cxpb=0.5, mutpb=0.5,
+                                         # ngen=generations, stats=stats, halloffame=hof, verbose=False)
 
-    print(log)
+    population, log = algorithms.eaMuPlusLambda(population, toolbox, population_size, population_size+50,
+                                                cxpb=0.5, mutpb=0.5, ngen=generations, stats=stats, halloffame=hof, verbose=True) # before pop_size + 40
+    #print(log)
     best = tools.selBest(population, k=1)[0]
     draw(best).save('solution.png')
 
 
-run(generations=500)
-
-# toolbox.register("evaluate", evaluate)
-# toolbox.register("mate", tools.cxTwoPoint)
-# toolbox.register("mutate", mutate, indpb=0.05)
-# toolbox.register("select", tools.selTournament, tournsize=3)
-
-
-# hof = tools.HallOfFame(3)
-# stats = tools.Statistics(lambda x: x.fitness.values[0])
-# stats.register("avg", statistics.mean)
-# stats.register("std", statistics.stdev)
-
-# population, log = algorithms.eaSimple(population, toolbox, cxpb=0.5, mutpb=0.1, ngen=50, verbose=False)
-# print(log)
+run(generations=600)
